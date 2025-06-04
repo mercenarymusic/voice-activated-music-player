@@ -17,7 +17,7 @@ class Speak:
         self.engine.setProperty('volume', 1.0)
 
         self.engine.connect('finished-utterance', self.on_finished)
-
+    
     def on_finished(self, name, completed):
         print("✔️ finished-utterance event fired")
         self.is_not_speaking = True

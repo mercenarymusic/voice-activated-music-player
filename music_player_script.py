@@ -3,6 +3,9 @@ import os
 import time
 import random
 from file_paths import *
+from speak import Speak
+
+s = Speak()
 
 class MusicPlayer:
 
@@ -16,10 +19,12 @@ class MusicPlayer:
     pygame.mixer.init()
     current_track = 0
     heard_wake_word = False
-
+    
 
     def test_music(self):
         pygame.mixer.music.load(test_song)
+        s.speak(os.path.basename(test_song))
+        time.sleep(3)
         pygame.mixer.music.play()
 
     '''
@@ -80,7 +85,7 @@ class MusicPlayer:
 
     def duck_volume(self):
         if pygame.mixer.music.get_busy():
-            pygame.mixer.music.set_volume(0.5)
+            pygame.mixer.music.set_volume(0.3)
             print("Volume dropped")
             time.sleep(5)
             pygame.mixer.music.set_volume(1.0)

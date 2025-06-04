@@ -1,0 +1,63 @@
+
+Old code using import sounddevoce as sd 
+    It uses a queue, KaldiRecognizer
+    Pyaudio seems to be better and faster
+    
+
+# Callback pushes audio data to the queue
+def callback(indata, frames, time, status):
+    if status:
+        print("Audio callback error:", status, file=sys.stderr)
+    q.put(indata.copy())  #use .copy() to avoid buffer issues
+
+# Load the Vosk model
+model = Model(model_file_path)
+recognizer = KaldiRecognizer(model, 16000, limited_word_list_to_str)
+
+# Start the stream
+with sd.InputStream(samplerate=16000, channels=1, dtype='int16',
+                    blocksize=8000, callback=callback):
+    print("🎤 Speak now... (Ctrl+C to stop)")
+    
+    #test espeak
+    s.speak("test sentence.")
+        
+    while True:
+        if s.is_not_speaking:
+            try:
+                data = q.get(timeout=1.0)
+            except queue.Empty:
+                continue
+
+            if counter >= 30:
+                recognizer.Reset()
+                counter = 0
+
+            if recognizer.AcceptWaveform(data.tobytes()):
+                result = json.loads(recognizer.Result())
+                text = result["text"].lower().strip()
+                print("You said:", text)
+                recognizer.Reset()
+                counter = 0
+
+                if WAKE_WORD in text:
+                    print("Wake word detected.")
+                    m.duck_volume()
+                    command_result = process_command(text, m, s, d)
+
+                    if command_result == "reset":
+                        recognizer.Reset()
+                        q.task_done()
+                        counter = 0
+
+                    elif command_result == "exit":
+                        break
+
+            else:
+                partial = json.loads(recognizer.PartialResult())
+                counter += 1
+        else:
+            try:
+                q.get_nowait()
+            except queue.Empty:
+                pass

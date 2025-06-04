@@ -36,7 +36,7 @@ def process_command(text, m, s, d):
         print("🎵 Playing music...")
         m.test_music()  # Test track only
 
-    elif any(word in words for word in [START_AT, PLAYING_AT]):
+    elif any(word in words for word in [text]):
         for word in words:
             if word.isdigit():
                 print(f"⏩ Starting at {word} seconds")

@@ -6,9 +6,5 @@ Voice recognition runs on Vosk
 
 Work in progress...... 
 
-Wake word = python
-test_music = works
-time = works
-goodbye = works
-shuffle = starts but can't stop 
+Voice to text only works.  I'm revamping the whole thing.  
  
