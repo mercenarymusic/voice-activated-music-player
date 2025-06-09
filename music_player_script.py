@@ -2,6 +2,8 @@ import pygame
 import os
 import time
 import random
+import threading
+import re #regualr expressions
 from file_paths import *
 from speak import Speak
 
@@ -15,34 +17,21 @@ class MusicPlayer:
         self.shuffle_song_list = []
         self.played_song_list = []
         self.paused = False
+        self.move_playhead = 0
 
     pygame.mixer.init()
-    current_track = 0
     heard_wake_word = False
     
+
+    def play(self,song_path):
+        pygame.mixer.music.load(song_path)
+        pygame.mixer.music.play()
 
     def test_music(self):
         pygame.mixer.music.load(test_song)
         s.speak(os.path.basename(test_song))
         time.sleep(3)
-        pygame.mixer.music.play()
-
-    '''
-    def play_track(index):
-        pygame.mixer.music.load(playlist[index])
-        pygame.mixer.music.play()
-        print(f"Now playing: {os.path.basename(playlist[index])}")
-    '''
-    def play(self, music):
-        if music is track:
-            #do someting
-            pass
-        if music is album:
-            #do somehitng
-            pass
-        if music is artist:
-            #do something
-            pass
+        self.play(test_song)
             
     def stop_track(self):
         pygame.mixer.music.stop()
@@ -53,35 +42,26 @@ class MusicPlayer:
         if self.paused:
             pygame.mixer.music.unpause()
             print("Resumed.")
+            self.paused = False
         else:
             pygame.mixer.music.pause()
             print("Paused.")
-        self.paused = True
+            self.paused = True
+    
+    def track_time(self):
+        tracking_time = int(time.time() * 1000)
+        print(tracking_time)
+        self.elapsed_time = self.new_track_position + tracking_time
+        print("elapsed time in track time. ", self.elapsed_time)
 
-    def go_back_5(self):
-        current_pos = pygame.mixer.music.get_pos() / 1000  # ms to sec
-        new_pos = max(0, current_pos - 5)
-        pygame.mixer.music.play(start=new_pos)
-        print(f"Jumped to {int(new_pos)} seconds.")
+    def move_playhead_func(self, rewind_time): # takes a +/- number
+        track_position = pygame.mixer.music.get_pos() / 1000
+        track_position += self.move_playhead  # if the playhead isn't zero adjust track position to playhead
+        track_position += rewind_time # subtrack / add time from playhead
+        pygame.mixer.music.play(start=int(track_position)) # start playback at new track position
+        print("Track position: ", int(track_position))
+        self.move_playhead = track_position # update playhead
 
-    def go_back_10(self):
-        current_pos = pygame.mixer.music.get_pos() / 1000  # ms to sec
-        new_pos = max(0, current_pos - 10)
-        pygame.mixer.music.play(start=new_pos)
-        print(f"Jumped to {int(new_pos)} seconds.")
-
-    def go_back_30(self):
-        current_pos = pygame.mixer.music.get_pos() / 1000  # ms to sec
-        new_pos = max(0, current_pos - 30)
-        pygame.mixer.music.play(start=new_pos)
-        print(f"Jumped to {int(new_pos)} seconds.")
-
-    def start_at(self,seconds):
-        #current_pos = pygame.mixer.music.get_pos() / 1000  # ms to sec
-        #new_pos = max(0, current_pos + seconds)
-        convert_to_miliseconds = seconds * 1000
-        pygame.mixer.music.play(start=convert_to_miliseconds)
-        print(f"Jumped to {int(seconds)} seconds.")
 
     def duck_volume(self):
         if pygame.mixer.music.get_busy():
@@ -90,7 +70,7 @@ class MusicPlayer:
             time.sleep(5)
             pygame.mixer.music.set_volume(1.0)
         pass
-
+    
     def shuffle(self):
 
         # Recursively walk through directory and find music files
@@ -100,86 +80,38 @@ class MusicPlayer:
                 if file.lower().endswith(self.supported_extensions):
                     print(f"adding {os.path.join(root, file)}")
                     self.shuffle_song_list.append(os.path.join(root, file))
+        '''
         for song in self.shuffle_song_list:
             print("Shufled song list.......")
             print(song)
-
+        '''
         if not self.shuffle_song_list:
             raise FileNotFoundError(f"No music files found in {self.music_directory}")
 
         self.played_song_list = []
 
-        while True:
-            if len(self.played_song_list) == len(self.shuffle_song_list):
-                print("All songs have been played. Restarting shuffle.")
-                self.played_song_list = []
+        def play_loop():
+            while True:
+                if not pygame.mixer.music.get_busy() or not self.paused: # if music isn't playing and not paused
 
-            remaining_songs = [song for song in self.shuffle_song_list if song not in self.played_song_list]
-            print(f"remaining_songs {remaining_songs}")
+                    remaining_songs = []
+                    for song in self.shuffle_song_list:
+                        if song not in self.played_song_list:
+                            remaining_songs.append(song)
 
-            next_song = random.choice(remaining_songs)
-            print(f"next song: {next_song}")
-            next_song = str(next_song)
-            pygame.mixer.music.load(next_song)
-            pygame.mixer.music.play()
-            #self.play_song(next_song)
-            #self.played_song_list.append(next_song)
-            print(f"adding to played song list: {self.played_song_list}")
-            # Wait until the music stops playing
-            while pygame.mixer.music.get_busy():
-                time.sleep(0.1)  # Prevent high CPU usage
+                    next_song = random.choice(remaining_songs)
+                    print(f"next song: {self.extract_filename(str(next_song))}")
+                    s.speak(os.path.basename(self.extract_filename(str(next_song))))
+                    self.played_song_list.append(next_song)
+                    self.play(next_song)  # calls blocking function above
 
-    def play_song(self, song_path):
-        print(f"Now playing: {os.path.basename(song_path)}")  # Stub for actual playback
-        pygame.mixer.music.load(song_path)
-        pygame.mixer.music.play()
-        
+        threading.Thread(target=play_loop, daemon=True).start()
 
-'''
-def seek(seconds):
-    current_pos = pygame.mixer.music.get_pos() / 1000  # ms to sec
-    new_pos = max(0, current_pos + seconds)
-    pygame.mixer.music.play(start=new_pos)
-    print(f"Jumped to {int(new_pos)} seconds.")
+    def extract_filename(self, file_path):
+        # convert file_path to string when calling this function
+        match = re.search(r"[^/]+$", file_path)
+        if match:
+            return match.group(0)
+        return None
+    
 
-def next_track():
-    global current_track
-    current_track = (current_track + 1) % len(playlist)
-    play_track(current_track)
-
-def previous_track():
-    global current_track
-    current_track = (current_track - 1) % len(playlist)
-    play_track(current_track)
-
-# Start playing the first track
-play_track(current_track)
-
-# Command loop
-while True:
-    command = input("\nCommand: ").lower()
-    if "pause" in command:
-        pause_resume()
-    elif "stop" in command:
-        stop_track()
-    elif "resume" in command:
-        pause_resume()
-    elif "forward 10" in command:
-        seek(10)
-    elif "back 10" in command:
-        seek(-10)
-    elif "forward 5" in command:
-        seek(5)
-    elif "back 5" in command:
-        seek(-5)
-    elif "next" in command:
-        next_track()
-    elif "previous" in command:
-        previous_track()
-    elif "quit" in command:
-        stop_track()
-        print("Goodbye.")
-        break
-    else:
-        print("Unknown command.")
-'''
