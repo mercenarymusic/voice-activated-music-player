@@ -1,10 +1,13 @@
 Voice Activated Music Player (VAMP)
-Navigate Music Folder and play songs.  VAMP will listen and start playback or move to a different position in the track. 
-For example: Say:" <WAKE_WORD> go back five seconds and the track will start playback five seconds earlier in the track. 
+Navigate Music Folder and play songs.  
 
 Voice recognition runs on Vosk
 
 Work in progress...... 
 
-Voice to text only works.  I'm revamping the whole thing.  
+Saying "python test" will activate an mp3 if you set the file path. 
+moving the playhead around with voice commands works. 
+ i.e. python rewind ten seconds.  
+
+need to work on everything else.  
  
